@@ -59,8 +59,8 @@ public class youthpastor {
             int moodChoice = kybd.nextInt();
             kybd.nextLine();
 
-            String chosenVerse = "";
-            String responseType = "";
+            String chosenVerse;
+            String responseType;
 
             switch (moodChoice) {
                 case 1 -> {
