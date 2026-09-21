@@ -22,6 +22,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 
 public class game extends JFrame {
     private final CardLayout cardLayout = new CardLayout();
@@ -550,13 +551,64 @@ public class game extends JFrame {
         private List<Enemy> enemies = new ArrayList<>();
         private boolean bossWave;
         private boolean fpsMode;
+        private final List<Particle> particles = new ArrayList<>();
+        private final Timer animationTimer;
+
+        BattlefieldPanel() {
+            setOpaque(true);
+            setBackground(new Color(10, 15, 24));
+            setDoubleBuffered(true);
+            animationTimer = new Timer(80, e -> {
+                updateParticles();
+                repaint();
+            });
+            animationTimer.start();
+        }
 
         public void setFightData(Hero hero, List<Enemy> enemies, boolean bossWave, boolean fpsMode) {
             this.hero = hero;
             this.enemies = new ArrayList<>(enemies);
             this.bossWave = bossWave;
             this.fpsMode = fpsMode;
+            spawnAmbientParticles();
             repaint();
+        }
+
+        private void spawnAmbientParticles() {
+            particles.clear();
+            for (int i = 0; i < 24; i++) {
+                particles.add(new Particle(
+                        20 + (int) (Math.random() * (getWidth() - 40)),
+                        30 + (int) (Math.random() * (getHeight() - 100)),
+                        new Color(120 + (int) (Math.random() * 80), 180 + (int) (Math.random() * 50), 255),
+                        1 + (int) (Math.random() * 3),
+                        -1 - (int) (Math.random() * 3),
+                        1 + (int) (Math.random() * 3)
+                ));
+            }
+        }
+
+        private void updateParticles() {
+            for (int i = particles.size() - 1; i >= 0; i--) {
+                Particle p = particles.get(i);
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                if (p.life <= 0 || p.x < 0 || p.x > getWidth() || p.y < 0 || p.y > getHeight()) {
+                    particles.remove(i);
+                }
+            }
+
+            if (particles.size() < 30) {
+                particles.add(new Particle(
+                        20 + (int) (Math.random() * (getWidth() - 40)),
+                        30 + (int) (Math.random() * (getHeight() - 100)),
+                        new Color(255, 160 + (int) (Math.random() * 80), 90),
+                        2 + (int) (Math.random() * 3),
+                        (int) (Math.random() * 3) - 1,
+                        1 + (int) (Math.random() * 3)
+                ));
+            }
         }
 
         @Override
@@ -565,24 +617,40 @@ public class game extends JFrame {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            g2.setColor(new Color(14, 20, 35));
+            g2.setColor(new Color(8, 12, 22));
             g2.fillRect(0, 0, getWidth(), getHeight());
 
-            g2.setColor(new Color(34, 78, 115));
-            for (int i = 0; i < 10; i++) {
-                int y = 70 + i * 28;
+            g2.setColor(new Color(18, 32, 52));
+            for (int i = 0; i < 12; i++) {
+                int y = 50 + i * 32;
                 g2.drawLine(20, y, getWidth() - 20, y);
             }
 
-            g2.setColor(new Color(29, 47, 62));
-            for (int i = 0; i < 8; i++) {
-                int x = 50 + i * 90;
-                g2.drawLine(x, 120, x + 60, getHeight() - 20);
+            g2.setColor(new Color(83, 122, 162));
+            for (int i = 0; i < 10; i++) {
+                int x = 25 + i * 75;
+                int h = 70 + ((i * 23) % 90);
+                g2.fillRect(x, getHeight() - 170 - h, 42, h);
+                g2.fillRect(x + 10, getHeight() - 210 - h, 20, 30);
+            }
+
+            g2.setColor(new Color(22, 55, 38));
+            g2.fillRect(0, getHeight() - 90, getWidth(), 90);
+            g2.setColor(new Color(43, 75, 54));
+            for (int i = 0; i < getWidth(); i += 28) {
+                g2.fillRect(i, getHeight() - 90 + (i % 2 == 0 ? 16 : 8), 14, 18);
+            }
+
+            for (Particle particle : particles) {
+                g2.setColor(particle.color);
+                g2.fillOval(particle.x, particle.y, particle.size, particle.size);
             }
 
             if (hero != null) {
                 int heroX = 110;
                 int heroY = getHeight() - 120;
+                g2.setColor(hero.color.darker());
+                g2.fillRoundRect(heroX - 12, heroY + 18, 104, 90, 18, 18);
                 g2.setColor(hero.color);
                 g2.fillRoundRect(heroX, heroY, 80, 110, 18, 18);
                 g2.setColor(Color.WHITE);
@@ -596,13 +664,15 @@ public class game extends JFrame {
                 g2.drawString(hero.name, heroX - 10, heroY - 22);
             }
 
-            int enemyStartX = getWidth() - 140;
+            int enemyStartX = getWidth() - 150;
             int enemyY = getHeight() - 120;
             for (int i = 0; i < enemies.size(); i++) {
                 Enemy enemy = enemies.get(i);
                 int x = enemyStartX - i * 90;
-                g2.setColor(bossWave && i == 0 ? new Color(255, 120, 90) : new Color(200, 70, 70));
-                g2.fillRoundRect(x, enemyY - (bossWave && i == 0 ? 10 : 0), 80, 110, 18, 18);
+                g2.setColor((bossWave && i == 0) ? new Color(255, 120, 90) : new Color(200, 70, 70));
+                g2.fillRoundRect(x - 10, enemyY + 18, 100, 90, 18, 18);
+                g2.setColor((bossWave && i == 0) ? new Color(255, 160, 120) : new Color(220, 100, 100));
+                g2.fillRoundRect(x, enemyY, 80, 110, 18, 18);
                 g2.setColor(Color.WHITE);
                 g2.fillOval(x + 18, enemyY - 35, 42, 42);
                 g2.setColor(new Color(15, 15, 15));
@@ -621,6 +691,26 @@ public class game extends JFrame {
             }
 
             g2.dispose();
+        }
+
+        static class Particle {
+            int x;
+            int y;
+            Color color;
+            int size;
+            int vx;
+            int vy;
+            int life;
+
+            Particle(int x, int y, Color color, int size, int vx, int vy) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.size = size;
+                this.vx = vx;
+                this.vy = vy;
+                this.life = 40 + (int) (Math.random() * 40);
+            }
         }
     }
 
