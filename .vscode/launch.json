@@ -4,10 +4,18 @@
         {
             "type": "java",
             "request": "launch",
+            "name": "Launch game",
+            "mainClass": "game",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/game1"
+        },
+        {
+            "type": "java",
+            "request": "launch",
             "name": "Launch youthpastor",
             "mainClass": "youthpastor",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}/src"
         }
     ]
 }
