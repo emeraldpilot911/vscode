@@ -3,7 +3,10 @@ import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridLayout;
+import java.awt.RenderingHints;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -43,6 +46,7 @@ public class game extends JFrame {
     private final JLabel enemyInfo = new JLabel();
     private final JLabel waveInfo = new JLabel();
     private final JLabel scoreInfo = new JLabel();
+    private final BattlefieldPanel battlefieldPanel = new BattlefieldPanel();
 
     private JButton attackButton;
     private JButton specialButton;
@@ -289,12 +293,13 @@ public class game extends JFrame {
         scroll.setPreferredSize(new Dimension(980, 500));
         scroll.setBorder(BorderFactory.createLineBorder(new Color(72, 110, 155), 2));
 
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.setOpaque(false);
-        bottomPanel.add(scroll, BorderLayout.CENTER);
+        JPanel centerArea = new JPanel(new BorderLayout(12, 12));
+        centerArea.setOpaque(false);
+        centerArea.add(battlefieldPanel, BorderLayout.CENTER);
+        centerArea.add(scroll, BorderLayout.SOUTH);
 
         gamePanel.add(topBar, BorderLayout.NORTH);
-        gamePanel.add(bottomPanel, BorderLayout.CENTER);
+        gamePanel.add(centerArea, BorderLayout.CENTER);
         gamePanel.add(actionPanel, BorderLayout.SOUTH);
 
         mainPanel.add(gamePanel, "game");
@@ -361,6 +366,7 @@ public class game extends JFrame {
         spawnWave();
         updateHud();
         logArea.setText("Hero chosen: " + selectedHero.name + "\n" + (fpsMode ? "FPS mission online." : "Adventure mode online.") + "\n");
+        battlefieldPanel.setFightData(selectedHero, enemies, bossWave, fpsMode);
         cardLayout.show(mainPanel, "game");
     }
 
@@ -498,6 +504,7 @@ public class game extends JFrame {
         }
 
         updateHud();
+        battlefieldPanel.setFightData(selectedHero, enemies, bossWave, fpsMode);
     }
 
     private void winWave() {
@@ -535,6 +542,86 @@ public class game extends JFrame {
         enemyInfo.setText("Enemy: " + enemyText + (bossWave ? "  [BOSS]" : ""));
         waveInfo.setText("Wave: " + wave + (bossWave ? "  BOSS" : ""));
         scoreInfo.setText("Score: " + score + "   Coins: " + selectedHero.coins + "   Mode: " + (fpsMode ? "FPS" : "Adventure"));
+        battlefieldPanel.setFightData(selectedHero, enemies, bossWave, fpsMode);
+    }
+
+    static class BattlefieldPanel extends JPanel {
+        private Hero hero;
+        private List<Enemy> enemies = new ArrayList<>();
+        private boolean bossWave;
+        private boolean fpsMode;
+
+        public void setFightData(Hero hero, List<Enemy> enemies, boolean bossWave, boolean fpsMode) {
+            this.hero = hero;
+            this.enemies = new ArrayList<>(enemies);
+            this.bossWave = bossWave;
+            this.fpsMode = fpsMode;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            g2.setColor(new Color(14, 20, 35));
+            g2.fillRect(0, 0, getWidth(), getHeight());
+
+            g2.setColor(new Color(34, 78, 115));
+            for (int i = 0; i < 10; i++) {
+                int y = 70 + i * 28;
+                g2.drawLine(20, y, getWidth() - 20, y);
+            }
+
+            g2.setColor(new Color(29, 47, 62));
+            for (int i = 0; i < 8; i++) {
+                int x = 50 + i * 90;
+                g2.drawLine(x, 120, x + 60, getHeight() - 20);
+            }
+
+            if (hero != null) {
+                int heroX = 110;
+                int heroY = getHeight() - 120;
+                g2.setColor(hero.color);
+                g2.fillRoundRect(heroX, heroY, 80, 110, 18, 18);
+                g2.setColor(Color.WHITE);
+                g2.fillOval(heroX + 20, heroY - 18, 40, 40);
+                g2.setColor(new Color(15, 15, 15));
+                g2.fillRect(heroX - 20, heroY - 10, 120, 16);
+                g2.setColor(new Color(50, 220, 120));
+                int hpWidth = (int) ((hero.hp * 100.0) / hero.maxHp);
+                g2.fillRect(heroX - 20, heroY - 10, hpWidth, 16);
+                g2.setColor(Color.WHITE);
+                g2.drawString(hero.name, heroX - 10, heroY - 22);
+            }
+
+            int enemyStartX = getWidth() - 140;
+            int enemyY = getHeight() - 120;
+            for (int i = 0; i < enemies.size(); i++) {
+                Enemy enemy = enemies.get(i);
+                int x = enemyStartX - i * 90;
+                g2.setColor(bossWave && i == 0 ? new Color(255, 120, 90) : new Color(200, 70, 70));
+                g2.fillRoundRect(x, enemyY - (bossWave && i == 0 ? 10 : 0), 80, 110, 18, 18);
+                g2.setColor(Color.WHITE);
+                g2.fillOval(x + 18, enemyY - 35, 42, 42);
+                g2.setColor(new Color(15, 15, 15));
+                g2.fillRect(x - 10, enemyY - 52, 100, 12);
+                g2.setColor(new Color(255, 100, 100));
+                int enemyHpWidth = Math.max(0, (enemy.hp * 100 / Math.max(1, enemy.hp + 20)));
+                g2.fillRect(x - 10, enemyY - 52, enemyHpWidth, 12);
+                g2.drawString(enemy.name, x - 18, enemyY - 60);
+            }
+
+            if (fpsMode) {
+                g2.setColor(new Color(255, 210, 90));
+                g2.fillOval(getWidth() / 2 - 6, getHeight() / 2 - 6, 12, 12);
+                g2.drawLine(getWidth() / 2 - 18, getHeight() / 2, getWidth() / 2 + 18, getHeight() / 2);
+                g2.drawLine(getWidth() / 2, getHeight() / 2 - 18, getWidth() / 2, getHeight() / 2 + 18);
+            }
+
+            g2.dispose();
+        }
     }
 
     static class Hero {
